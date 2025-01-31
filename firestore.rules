@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user's email matches
+    function hasEmail(email) {
+      return request.auth.token.email == email;
+    }
+
+    // Basic collections
+    match /expenses/{expenseId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /incomes/{incomeId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /budgets/{budgetId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /userCategories/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Shared Wallets collection
+    match /sharedWallets/{walletId} {
+      // Allow read for authenticated users
+      allow read: if isAuthenticated();
+      
+      // Allow create for any authenticated user
+      allow create: if isAuthenticated();
+      
+      // Allow update if user is a member
+      allow update: if isAuthenticated() && 
+        (resource.data.members.hasAny([request.auth.token.email]) ||
+         request.resource.data.members.hasAny([request.auth.token.email]));
+      
+      // Allow delete if user is the creator
+      allow delete: if isAuthenticated() && 
+        resource.data.createdBy == request.auth.token.email;
+    }
+  }
+}
