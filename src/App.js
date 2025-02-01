@@ -74,7 +74,7 @@ function App() {
   return (
     <CustomThemeProvider>
       <CssBaseline />
-      <BrowserRouter basename="/expense-track">
+      <BrowserRouter basename="/expense-tracker">
         <AuthProvider>
           <ExpenseProvider>
             <AppContent />
