@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Paper,
@@ -43,6 +44,8 @@ import SharedWalletExpenses from "./SharedWalletExpenses";
 
 export default function SharedWallet() {
   const { currentUser, getUserDisplayName } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [wallets, setWallets] = useState([]);
   const [openNewWalletDialog, setOpenNewWalletDialog] = useState(false);
   const [openInviteDialog, setOpenInviteDialog] = useState(false);
@@ -121,6 +124,25 @@ export default function SharedWallet() {
       fetchDisplayNames();
     }
   }, [wallets, currentUser, getUserDisplayName]);
+
+  // Handle wallet selection
+  const handleWalletSelect = (wallet) => {
+    setSelectedWalletForExpenses(wallet);
+    navigate(`/app/shared-wallets/${wallet.id}`);
+  };
+
+  // Check URL for wallet ID on component mount
+  useEffect(() => {
+    const pathParts = location.pathname.split("/");
+    const walletId = pathParts[pathParts.length - 1];
+
+    if (walletId && wallets.length > 0) {
+      const wallet = wallets.find((w) => w.id === walletId);
+      if (wallet) {
+        setSelectedWalletForExpenses(wallet);
+      }
+    }
+  }, [location.pathname, wallets]);
 
   const handleCreateWallet = async (e) => {
     e.preventDefault();
@@ -275,7 +297,7 @@ export default function SharedWallet() {
                   component={Paper}
                   variant="outlined"
                   sx={{ mb: 2, p: 2, cursor: "pointer" }}
-                  onClick={() => setSelectedWalletForExpenses(wallet)}
+                  onClick={() => handleWalletSelect(wallet)}
                 >
                   <ListItemText
                     primary={

@@ -55,7 +55,10 @@ function AppContent() {
                     <Route path="/budget" element={<Budget />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/guide" element={<QuickStartGuide />} />
-                    <Route path="/shared-wallets" element={<SharedWallet />} />
+                    <Route
+                      path="/shared-wallets/*"
+                      element={<SharedWallet />}
+                    />
                   </Routes>
                 </Container>
               </Box>
@@ -74,7 +77,7 @@ function App() {
   return (
     <CustomThemeProvider>
       <CssBaseline />
-      <HashRouter>
+      <HashRouter basename="">
         <AuthProvider>
           <ExpenseProvider>
             <AppContent />
