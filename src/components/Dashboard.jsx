@@ -23,6 +23,7 @@ import MonthlyStats from "./MonthlyStats";
 import ExpenseChart from "./ExpenseChart";
 import CategoryPieChart from "./CategoryPieChart";
 import QuoteDisplay from "./QuoteDisplay";
+import CategorySpendingChart from "./CategorySpendingChart";
 
 const MotionPaper = motion(Paper);
 const MotionCard = motion(Card);
@@ -242,6 +243,9 @@ export default function Dashboard() {
           </Grid>
           <Grid item xs={12}>
             <ExpenseChart />
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <CategorySpendingChart />
           </Grid>
         </Grid>
       </motion.div>

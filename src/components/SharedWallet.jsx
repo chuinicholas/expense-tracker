@@ -22,7 +22,7 @@ import {
   Chip,
   Divider,
 } from "@mui/material";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import AddIcon from "@mui/icons-material/Add";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
@@ -39,13 +39,16 @@ import {
   deleteDoc,
   onSnapshot,
 } from "firebase/firestore";
+import SharedWalletExpenses from "./SharedWalletExpenses";
 
 export default function SharedWallet() {
-  const { currentUser } = useAuth();
+  const { currentUser, getUserDisplayName } = useAuth();
   const [wallets, setWallets] = useState([]);
   const [openNewWalletDialog, setOpenNewWalletDialog] = useState(false);
   const [openInviteDialog, setOpenInviteDialog] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState(null);
+  const [selectedWalletForExpenses, setSelectedWalletForExpenses] =
+    useState(null);
   const [newWalletData, setNewWalletData] = useState({
     name: "",
     description: "",
@@ -54,6 +57,11 @@ export default function SharedWallet() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [memberDisplayNames, setMemberDisplayNames] = useState({});
+  const [deleteWalletDialog, setDeleteWalletDialog] = useState({
+    open: false,
+    wallet: null,
+  });
 
   // Fetch user's shared wallets
   useEffect(() => {
@@ -79,6 +87,40 @@ export default function SharedWallet() {
       return fetchWallets();
     }
   }, [currentUser]);
+
+  // Add this new function to get display name
+  const getDisplayNameInitial = (email) => {
+    if (memberDisplayNames[email]) {
+      return memberDisplayNames[email].charAt(0).toUpperCase();
+    }
+    // Fallback to email initial if display name is not available
+    return email.charAt(0).toUpperCase();
+  };
+
+  // Update the fetchDisplayNames function
+  useEffect(() => {
+    const fetchDisplayNames = async () => {
+      const names = {};
+      for (const wallet of wallets) {
+        for (const memberEmail of wallet.members) {
+          if (!names[memberEmail]) {
+            if (memberEmail === currentUser.email) {
+              names[memberEmail] = currentUser.displayName || memberEmail;
+            } else {
+              // Fetch display name from Firestore
+              const displayName = await getUserDisplayName(memberEmail);
+              names[memberEmail] = displayName || memberEmail;
+            }
+          }
+        }
+      }
+      setMemberDisplayNames(names);
+    };
+
+    if (wallets.length > 0) {
+      fetchDisplayNames();
+    }
+  }, [wallets, currentUser, getUserDisplayName]);
 
   const handleCreateWallet = async (e) => {
     e.preventDefault();
@@ -141,33 +183,64 @@ export default function SharedWallet() {
     }
   };
 
-  const handleDeleteWallet = async (walletId) => {
-    if (
-      !window.confirm("Are you sure you want to delete this shared wallet?")
-    ) {
-      return;
-    }
-
+  const handleDeleteWallet = async (wallet) => {
     try {
-      await deleteDoc(doc(db, "sharedWallets", walletId));
+      await deleteDoc(doc(db, "sharedWallets", wallet.id));
+      setDeleteWalletDialog({ open: false, wallet: null });
       setSuccess("Wallet deleted successfully!");
     } catch (error) {
       setError("Failed to delete wallet: " + error.message);
     }
   };
 
+  // Auto-dismiss success messages after 2 seconds
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess("");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
+  // Auto-dismiss error messages after 2 seconds
+  useEffect(() => {
+    if (error) {
+      const timer = setTimeout(() => {
+        setError("");
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [error]);
+
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", p: 3 }}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 3 }}>
-          {success}
-        </Alert>
-      )}
+      <AnimatePresence mode="wait">
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Alert severity="error" sx={{ mb: 3 }}>
+              {error}
+            </Alert>
+          </motion.div>
+        )}
+        {success && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Alert severity="success" sx={{ mb: 3 }}>
+              {success}
+            </Alert>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
         <Stack
@@ -201,7 +274,8 @@ export default function SharedWallet() {
                 <ListItem
                   component={Paper}
                   variant="outlined"
-                  sx={{ mb: 2, p: 2 }}
+                  sx={{ mb: 2, p: 2, cursor: "pointer" }}
+                  onClick={() => setSelectedWalletForExpenses(wallet)}
                 >
                   <ListItemText
                     primary={
@@ -220,16 +294,14 @@ export default function SharedWallet() {
                           alignItems="center"
                           mt={1}
                         >
-                          <Chip
-                            label={`Spent: $${wallet.totalSpent.toFixed(2)}`}
-                            color="secondary"
-                            variant="outlined"
-                          />
                           <AvatarGroup max={4}>
                             {wallet.members.map((member) => (
-                              <Tooltip key={member} title={member}>
+                              <Tooltip
+                                key={member}
+                                title={memberDisplayNames[member] || member}
+                              >
                                 <Avatar sx={{ width: 24, height: 24 }}>
-                                  {member[0].toUpperCase()}
+                                  {getDisplayNameInitial(member)}
                                 </Avatar>
                               </Tooltip>
                             ))}
@@ -242,7 +314,8 @@ export default function SharedWallet() {
                     <Stack direction="row" spacing={1}>
                       <IconButton
                         edge="end"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedWallet(wallet);
                           setOpenInviteDialog(true);
                         }}
@@ -252,7 +325,10 @@ export default function SharedWallet() {
                       {wallet.createdBy === currentUser.email && (
                         <IconButton
                           edge="end"
-                          onClick={() => handleDeleteWallet(wallet.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteWalletDialog({ open: true, wallet });
+                          }}
                         >
                           <DeleteIcon />
                         </IconButton>
@@ -265,6 +341,40 @@ export default function SharedWallet() {
           </List>
         )}
       </Paper>
+
+      {/* Show expenses when a wallet is selected */}
+      {selectedWalletForExpenses && (
+        <Paper elevation={3} sx={{ p: 3 }}>
+          <Stack
+            direction="row"
+            justifyContent="space-between"
+            alignItems="center"
+            mb={2}
+          >
+            <Typography variant="h5">
+              {selectedWalletForExpenses.name} - Expenses
+            </Typography>
+            <Button
+              variant="outlined"
+              onClick={() => setSelectedWalletForExpenses(null)}
+            >
+              Back to Wallets
+            </Button>
+          </Stack>
+          <SharedWalletExpenses
+            wallet={selectedWalletForExpenses}
+            onUpdate={() => {
+              // Refresh the wallets list when an expense is added/deleted
+              const updatedWallet = wallets.find(
+                (w) => w.id === selectedWalletForExpenses.id
+              );
+              if (updatedWallet) {
+                setSelectedWalletForExpenses(updatedWallet);
+              }
+            }}
+          />
+        </Paper>
+      )}
 
       {/* Create New Wallet Dialog */}
       <Dialog
@@ -336,6 +446,87 @@ export default function SharedWallet() {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      {/* Delete Wallet Confirmation Dialog */}
+      <Dialog
+        open={deleteWalletDialog.open}
+        onClose={() => setDeleteWalletDialog({ open: false, wallet: null })}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            width: "100%",
+            maxWidth: 400,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <DeleteIcon color="error" />
+            Delete Shared Wallet
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete this shared wallet? This action
+            cannot be undone.
+          </Typography>
+          {deleteWalletDialog.wallet && (
+            <Paper
+              variant="outlined"
+              sx={{ p: 2, bgcolor: "background.default" }}
+            >
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                  {deleteWalletDialog.wallet.name}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {deleteWalletDialog.wallet.description}
+                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <AvatarGroup
+                    max={3}
+                    sx={{ "& .MuiAvatar-root": { width: 24, height: 24 } }}
+                  >
+                    {deleteWalletDialog.wallet.members.map((member) => (
+                      <Tooltip
+                        key={member}
+                        title={memberDisplayNames[member] || member}
+                      >
+                        <Avatar sx={{ width: 24, height: 24 }}>
+                          {getDisplayNameInitial(member)}
+                        </Avatar>
+                      </Tooltip>
+                    ))}
+                  </AvatarGroup>
+                  <Typography variant="caption" color="text.secondary">
+                    {deleteWalletDialog.wallet.members.length} members
+                  </Typography>
+                </Stack>
+              </Stack>
+            </Paper>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() => setDeleteWalletDialog({ open: false, wallet: null })}
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => handleDeleteWallet(deleteWalletDialog.wallet)}
+            variant="contained"
+            color="error"
+            startIcon={<DeleteIcon />}
+          >
+            Delete Wallet
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

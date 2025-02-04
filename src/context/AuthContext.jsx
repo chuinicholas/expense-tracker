@@ -18,6 +18,10 @@ import {
   updateDoc,
   getDoc,
   serverTimestamp,
+  collection,
+  query,
+  where,
+  getDocs,
 } from "firebase/firestore";
 
 const AuthContext = createContext();
@@ -37,7 +41,9 @@ export function AuthProvider({ children }) {
         email,
         password
       );
-      // Create user document in Firestore
+      // Update the user's profile with display name
+      await updateProfile(result.user, { displayName });
+      // Store user data in Firestore
       await setDoc(doc(db, "users", result.user.uid), {
         email,
         displayName,
@@ -95,33 +101,24 @@ export function AuthProvider({ children }) {
     return sendPasswordResetEmail(auth, email);
   }
 
-  async function updateUserProfile(profileData) {
+  async function updateUserProfile(updates) {
     if (!currentUser) throw new Error("No user logged in");
 
     try {
-      // Update Firebase Auth profile
-      await updateProfile(auth.currentUser, profileData);
-
-      const userRef = doc(db, "users", currentUser.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (userDoc.exists()) {
-        await updateDoc(userRef, {
-          displayName: profileData.displayName,
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        await setDoc(userRef, {
-          email: currentUser.email,
-          displayName: profileData.displayName,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+      await updateProfile(currentUser, updates);
+      // Update user data in Firestore
+      if (updates.displayName) {
+        await setDoc(
+          doc(db, "users", currentUser.uid),
+          {
+            displayName: updates.displayName,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
       }
-
-      // Update local user state with the new data
-      const updatedUser = auth.currentUser;
-      setCurrentUser(updatedUser);
+      // Force a refresh of the current user
+      setCurrentUser({ ...currentUser, ...updates });
     } catch (error) {
       console.error("Error updating profile:", error);
       throw error;
@@ -132,10 +129,26 @@ export function AuthProvider({ children }) {
     if (!currentUser) throw new Error("No user logged in");
 
     try {
-      await updatePassword(auth.currentUser, newPassword);
+      await updatePassword(currentUser, newPassword);
     } catch (error) {
       console.error("Error updating password:", error);
       throw error;
+    }
+  }
+
+  // Add function to get user's display name
+  async function getUserDisplayName(email) {
+    try {
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("email", "==", email));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        return querySnapshot.docs[0].data().displayName;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching user display name:", error);
+      return null;
     }
   }
 
@@ -157,6 +170,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     updateUserProfile,
     updateUserPassword,
+    getUserDisplayName,
   };
 
   return (
