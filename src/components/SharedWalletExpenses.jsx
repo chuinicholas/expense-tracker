@@ -138,6 +138,7 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
           if (memberEmail === currentUser.email) {
             names[memberEmail] = currentUser.displayName || memberEmail;
           } else {
+            // Always fetch the latest display name
             const displayName = await getUserDisplayName(memberEmail);
             names[memberEmail] = displayName || memberEmail;
           }
