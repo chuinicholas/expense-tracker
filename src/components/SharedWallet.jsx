@@ -210,6 +210,11 @@ export default function SharedWallet() {
       await deleteDoc(doc(db, "sharedWallets", wallet.id));
       setDeleteWalletDialog({ open: false, wallet: null });
       setSuccess("Wallet deleted successfully!");
+      // Navigate back to the wallets list if the deleted wallet was selected
+      if (selectedWalletForExpenses?.id === wallet.id) {
+        setSelectedWalletForExpenses(null);
+        navigate("/app/shared-wallets");
+      }
     } catch (error) {
       setError("Failed to delete wallet: " + error.message);
     }
@@ -479,6 +484,7 @@ export default function SharedWallet() {
             borderRadius: 2,
             width: "100%",
             maxWidth: 400,
+            bgcolor: "background.paper",
           },
         }}
       >
