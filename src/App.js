@@ -1,5 +1,5 @@
 import { Container, Box, CssBaseline } from "@mui/material";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ExpenseProvider } from "./context/ExpenseContext";
 import { CustomThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -74,13 +74,13 @@ function App() {
   return (
     <CustomThemeProvider>
       <CssBaseline />
-      <BrowserRouter basename="/expense-tracker">
+      <HashRouter>
         <AuthProvider>
           <ExpenseProvider>
             <AppContent />
           </ExpenseProvider>
         </AuthProvider>
-      </BrowserRouter>
+      </HashRouter>
     </CustomThemeProvider>
   );
 }
