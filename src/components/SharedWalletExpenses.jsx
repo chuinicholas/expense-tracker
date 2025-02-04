@@ -77,6 +77,10 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
     open: false,
     expense: null,
   });
+  const [deleteCategoryDialog, setDeleteCategoryDialog] = useState({
+    open: false,
+    category: null,
+  });
 
   // Initialize categories from wallet
   const [allCategories, setAllCategories] = useState(
@@ -304,14 +308,6 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
   };
 
   const handleDeleteCategory = async (categoryToDelete) => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete this category? Any expenses with this category will keep the category name."
-      )
-    ) {
-      return;
-    }
-
     try {
       const walletRef = doc(db, "sharedWallets", wallet.id);
       const updatedCategories = allCategories.filter(
@@ -332,6 +328,7 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
       // Update local state immediately
       setAllCategories(updatedCategories);
       setSuccess("Category deleted successfully!");
+      setDeleteCategoryDialog({ open: false, category: null });
       onUpdate && onUpdate();
     } catch (error) {
       setError("Failed to delete category: " + error.message);
@@ -643,7 +640,9 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
                 <Chip
                   key={category}
                   label={category}
-                  onDelete={() => handleDeleteCategory(category)}
+                  onDelete={() =>
+                    setDeleteCategoryDialog({ open: true, category })
+                  }
                   sx={{
                     mb: 1,
                     bgcolor: `${getCategoryColor(category)}20`,
@@ -674,6 +673,67 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
           <Button onClick={() => setOpenCategoryDialog(false)}>Close</Button>
           <Button onClick={handleAddCategory} variant="contained">
             Add Category
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Category Confirmation Dialog */}
+      <Dialog
+        open={deleteCategoryDialog.open}
+        onClose={() => setDeleteCategoryDialog({ open: false, category: null })}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            width: "100%",
+            maxWidth: 400,
+            bgcolor: "background.paper",
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1 }}>
+          <Typography
+            variant="h6"
+            component="div"
+            sx={{ display: "flex", alignItems: "center", gap: 1 }}
+          >
+            <DeleteIcon color="error" />
+            Delete Category
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to delete this category? Any expenses with
+            this category will keep the category name.
+          </Typography>
+          {deleteCategoryDialog.category && (
+            <Paper
+              variant="outlined"
+              sx={{ p: 2, bgcolor: "background.default" }}
+            >
+              <Stack spacing={1}>
+                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                  {deleteCategoryDialog.category}
+                </Typography>
+              </Stack>
+            </Paper>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 3 }}>
+          <Button
+            onClick={() =>
+              setDeleteCategoryDialog({ open: false, category: null })
+            }
+            variant="outlined"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => handleDeleteCategory(deleteCategoryDialog.category)}
+            variant="contained"
+            color="error"
+            startIcon={<DeleteIcon />}
+          >
+            Delete Category
           </Button>
         </DialogActions>
       </Dialog>
