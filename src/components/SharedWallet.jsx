@@ -104,19 +104,20 @@ export default function SharedWallet() {
   useEffect(() => {
     const fetchDisplayNames = async () => {
       const names = {};
-      for (const wallet of wallets) {
-        for (const memberEmail of wallet.members) {
+      const fetchPromises = wallets.flatMap((wallet) =>
+        wallet.members.map(async (memberEmail) => {
           if (!names[memberEmail]) {
             if (memberEmail === currentUser.email) {
               names[memberEmail] = currentUser.displayName || memberEmail;
             } else {
-              // Always fetch the latest display name
               const displayName = await getUserDisplayName(memberEmail);
               names[memberEmail] = displayName || memberEmail;
             }
           }
-        }
-      }
+        })
+      );
+
+      await Promise.all(fetchPromises);
       setMemberDisplayNames(names);
     };
 
@@ -192,14 +193,12 @@ export default function SharedWallet() {
     }
 
     try {
-      // First, check if we already have this member's display name
-      if (!memberDisplayNames[inviteEmail.trim()]) {
-        const displayName = await getUserDisplayName(inviteEmail.trim());
-        setMemberDisplayNames((prev) => ({
-          ...prev,
-          [inviteEmail.trim()]: displayName || inviteEmail.trim(),
-        }));
-      }
+      // First, fetch the display name of the new member
+      const displayName = await getUserDisplayName(inviteEmail.trim());
+      setMemberDisplayNames((prev) => ({
+        ...prev,
+        [inviteEmail.trim()]: displayName || inviteEmail.trim(),
+      }));
 
       const walletRef = doc(db, "sharedWallets", selectedWallet.id);
       await updateDoc(walletRef, {

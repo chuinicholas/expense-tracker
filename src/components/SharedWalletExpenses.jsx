@@ -133,17 +133,18 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
   useEffect(() => {
     const fetchDisplayNames = async () => {
       const names = {};
-      for (const memberEmail of wallet.members) {
+      const fetchPromises = wallet.members.map(async (memberEmail) => {
         if (!names[memberEmail]) {
           if (memberEmail === currentUser.email) {
             names[memberEmail] = currentUser.displayName || memberEmail;
           } else {
-            // Always fetch the latest display name
             const displayName = await getUserDisplayName(memberEmail);
             names[memberEmail] = displayName || memberEmail;
           }
         }
-      }
+      });
+
+      await Promise.all(fetchPromises);
       setMemberDisplayNames(names);
     };
 
@@ -209,6 +210,11 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
     // For categories without expenses, use their position in allCategories
     const index = allCategories.findIndex((cat) => cat === categoryName);
     return CATEGORY_COLORS[index % CATEGORY_COLORS.length];
+  };
+
+  // Add a helper function to get display name
+  const getDisplayName = (email) => {
+    return memberDisplayNames[email] || email;
   };
 
   const handleAddCategory = async () => {
@@ -490,17 +496,87 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
                         tick={{ fill: "#666" }}
                       />
                       <RechartsTooltip
-                        formatter={(value, name, props) => [
-                          `$${value.toFixed(2)} (${props.payload.percentage}%)`,
-                          "Amount",
-                        ]}
-                        contentStyle={{
-                          backgroundColor: "rgba(255, 255, 255, 0.95)",
-                          borderRadius: 8,
-                          border: "none",
-                          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-                          padding: "8px 12px",
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <Paper
+                                elevation={3}
+                                sx={(theme) => ({
+                                  p: 1.5,
+                                  bgcolor:
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(33, 33, 33, 0.95)"
+                                      : "rgba(255, 255, 255, 0.98)",
+                                  border: "1px solid",
+                                  borderColor: getCategoryColor(data.name),
+                                  minWidth: 180,
+                                  color: theme.palette.text.primary,
+                                })}
+                              >
+                                <Stack spacing={0.5}>
+                                  <Typography
+                                    variant="subtitle2"
+                                    sx={{
+                                      color: getCategoryColor(data.name),
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {data.name}
+                                  </Typography>
+                                  <Stack
+                                    direction="row"
+                                    justifyContent="space-between"
+                                    alignItems="center"
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={(theme) => ({
+                                        color: theme.palette.text.primary,
+                                      })}
+                                    >
+                                      Amount:
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      sx={(theme) => ({
+                                        fontWeight: 500,
+                                        color: theme.palette.text.primary,
+                                      })}
+                                    >
+                                      ${data.value.toFixed(2)}
+                                    </Typography>
+                                  </Stack>
+                                  <Stack
+                                    direction="row"
+                                    justifyContent="space-between"
+                                    alignItems="center"
+                                  >
+                                    <Typography
+                                      variant="body2"
+                                      sx={(theme) => ({
+                                        color: theme.palette.text.primary,
+                                      })}
+                                    >
+                                      Percentage:
+                                    </Typography>
+                                    <Typography
+                                      variant="body2"
+                                      sx={(theme) => ({
+                                        fontWeight: 500,
+                                        color: theme.palette.text.primary,
+                                      })}
+                                    >
+                                      {data.percentage}%
+                                    </Typography>
+                                  </Stack>
+                                </Stack>
+                              </Paper>
+                            );
+                          }
+                          return null;
                         }}
+                        cursor={false}
                       />
                       <Bar
                         dataKey="value"
@@ -592,8 +668,7 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
                           }}
                         />
                         <Typography variant="caption" color="text.secondary">
-                          Paid by:{" "}
-                          {memberDisplayNames[expense.paidBy] || expense.paidBy}
+                          Paid by: {getDisplayName(expense.paidBy)}
                         </Typography>
                         <Typography variant="caption" color="text.secondary">
                           {new Date(expense.date).toLocaleDateString()}
@@ -601,19 +676,16 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
                       </Stack>
                     }
                   />
-                  {(expense.paidBy === currentUser.email ||
-                    wallet.createdBy === currentUser.email) && (
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        onClick={() =>
-                          setDeleteConfirmDialog({ open: true, expense })
-                        }
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  )}
+                  <ListItemSecondaryAction>
+                    <IconButton
+                      edge="end"
+                      onClick={() =>
+                        setDeleteConfirmDialog({ open: true, expense })
+                      }
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </ListItemSecondaryAction>
                 </ListItem>
               </motion.div>
             ))
