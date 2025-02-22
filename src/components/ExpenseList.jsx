@@ -24,12 +24,17 @@ import {
   DialogContent,
   DialogActions,
   Alert,
+  useTheme,
+  useMediaQuery,
+  Card,
+  CardContent,
 } from "@mui/material";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import SearchIcon from "@mui/icons-material/Search";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { useExpense } from "../context/ExpenseContext";
 import * as XLSX from "xlsx";
+import { motion } from "framer-motion";
 
 export default function TransactionList() {
   const {
@@ -49,6 +54,9 @@ export default function TransactionList() {
   const [selectedExpense, setSelectedExpense] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Combine expenses and incomes into a single array
   const allTransactions = [
@@ -201,18 +209,20 @@ export default function TransactionList() {
   };
 
   return (
-    <Box sx={{ mt: 4 }}>
+    <Box sx={{ mt: 4, px: { xs: 1, sm: 0 } }}>
       <Paper
         sx={{
-          p: 3,
+          p: { xs: 2, sm: 3 },
           backgroundColor: "background.paper",
           borderRadius: 2,
           boxShadow: 1,
           border: "1px solid rgba(148, 163, 184, 0.1)",
+          overflow: "hidden",
         }}
       >
         <Stack spacing={2}>
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={2}>
+          {/* Search and Filter Section */}
+          <Stack spacing={2}>
             <TextField
               fullWidth
               placeholder="Search by description..."
@@ -225,50 +235,38 @@ export default function TransactionList() {
                   </InputAdornment>
                 ),
               }}
-              sx={{ flex: 2 }}
+              size={isMobile ? "small" : "medium"}
             />
 
-            <FormControl sx={{ flex: 1 }}>
-              <InputLabel>Category</InputLabel>
-              <Select
-                value={searchCategory}
-                onChange={(e) => setSearchCategory(e.target.value)}
-                label="Category"
-              >
-                <MenuItem value="">All Categories</MenuItem>
-                {transactionType !== "income" &&
-                  expenseCategories.map((category) => (
-                    <MenuItem key={`expense-${category}`} value={category}>
-                      {category} (Expense)
-                    </MenuItem>
-                  ))}
-                {transactionType !== "expense" &&
-                  incomeCategories.map((category) => (
-                    <MenuItem key={`income-${category}`} value={category}>
-                      {category} (Income)
-                    </MenuItem>
-                  ))}
-              </Select>
-            </FormControl>
+            <Stack
+              direction={{ xs: "column", sm: "row" }}
+              spacing={2}
+              sx={{ width: "100%" }}
+            >
+              <FormControl fullWidth size={isMobile ? "small" : "medium"}>
+                <InputLabel>Category</InputLabel>
+                <Select
+                  value={searchCategory}
+                  onChange={(e) => setSearchCategory(e.target.value)}
+                  label="Category"
+                >
+                  <MenuItem value="">All Categories</MenuItem>
+                  {transactionType !== "income" &&
+                    expenseCategories.map((category) => (
+                      <MenuItem key={`expense-${category}`} value={category}>
+                        {category} (Expense)
+                      </MenuItem>
+                    ))}
+                  {transactionType !== "expense" &&
+                    incomeCategories.map((category) => (
+                      <MenuItem key={`income-${category}`} value={category}>
+                        {category} (Income)
+                      </MenuItem>
+                    ))}
+                </Select>
+              </FormControl>
 
-            <TextField
-              type="date"
-              label="Date"
-              value={searchDate}
-              onChange={(e) => setSearchDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-              sx={{ flex: 1 }}
-            />
-          </Stack>
-
-          <Stack
-            direction="row"
-            spacing={2}
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <Stack direction="row" spacing={2} alignItems="center">
-              <FormControl sx={{ width: { xs: "100%", sm: "200px" } }}>
+              <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                 <InputLabel>Month</InputLabel>
                 <Select
                   value={selectedMonth}
@@ -284,7 +282,7 @@ export default function TransactionList() {
                 </Select>
               </FormControl>
 
-              <FormControl sx={{ width: { xs: "100%", sm: "150px" } }}>
+              <FormControl fullWidth size={isMobile ? "small" : "medium"}>
                 <InputLabel>Type</InputLabel>
                 <Select
                   value={transactionType}
@@ -301,97 +299,268 @@ export default function TransactionList() {
               </FormControl>
             </Stack>
 
-            <Button
-              variant="contained"
-              startIcon={<FileDownloadIcon />}
-              onClick={exportToExcel}
-              sx={{
-                bgcolor: "primary.light",
-                "&:hover": {
-                  bgcolor: "primary.main",
-                },
-              }}
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="center"
+              justifyContent="space-between"
             >
-              Export to Excel
-            </Button>
-          </Stack>
-        </Stack>
+              <TextField
+                type="date"
+                label="Date"
+                value={searchDate}
+                onChange={(e) => setSearchDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                size={isMobile ? "small" : "medium"}
+              />
 
-        <TableContainer sx={{ mt: 3 }}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell>Description</TableCell>
-                <TableCell>Category</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell align="right">Amount</TableCell>
-                <TableCell align="center">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredTransactions.map((transaction, index) => (
-                <TableRow key={index}>
-                  <TableCell>{formatDate(transaction.date)}</TableCell>
-                  <TableCell>{transaction.description}</TableCell>
-                  <TableCell>{transaction.category}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={
-                        transaction.type === "expense" ? "Expense" : "Income"
-                      }
-                      color={
-                        transaction.type === "expense" ? "error" : "success"
-                      }
-                      size="small"
-                      sx={{ width: 80 }}
-                    />
-                  </TableCell>
-                  <TableCell
-                    align="right"
-                    sx={{
-                      color:
-                        transaction.type === "expense"
-                          ? "error.main"
-                          : "success.main",
-                      fontWeight: "medium",
-                    }}
+              <Button
+                variant="contained"
+                startIcon={<FileDownloadIcon />}
+                onClick={exportToExcel}
+                sx={{
+                  bgcolor: "primary.light",
+                  "&:hover": {
+                    bgcolor: "primary.main",
+                  },
+                  whiteSpace: "nowrap",
+                }}
+                size={isMobile ? "small" : "medium"}
+              >
+                Export
+              </Button>
+            </Stack>
+          </Stack>
+
+          {/* Transactions List */}
+          {isMobile ? (
+            // Mobile view - Card layout
+            <Stack spacing={1} sx={{ mt: 1 }}>
+              {filteredTransactions.length === 0 ? (
+                <Typography
+                  color="text.secondary"
+                  align="center"
+                  sx={{ py: 4 }}
+                >
+                  No transactions found
+                </Typography>
+              ) : (
+                filteredTransactions.map((transaction, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
                   >
-                    ${transaction.amount.toFixed(2)}
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      onClick={() => handleDeleteClick(transaction)}
+                    <Card
+                      variant="outlined"
                       sx={{
-                        color: "text.secondary",
-                        "&:hover": {
-                          color: "error.main",
-                        },
-                        transition: "color 0.2s",
+                        borderLeft: 3,
+                        borderLeftColor:
+                          transaction.type === "expense"
+                            ? "error.main"
+                            : "success.main",
                       }}
                     >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredTransactions.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} align="center">
-                    No transactions found
-                  </TableCell>
-                </TableRow>
+                      <CardContent sx={{ p: "8px !important" }}>
+                        <Stack spacing={0.5}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                          >
+                            <Typography
+                              variant="body1"
+                              component="div"
+                              sx={{
+                                fontSize: "0.9rem",
+                                fontWeight: 500,
+                                lineHeight: 1.2,
+                              }}
+                            >
+                              {transaction.description}
+                            </Typography>
+                            <Stack
+                              direction="row"
+                              spacing={1}
+                              alignItems="center"
+                            >
+                              <Typography
+                                variant="body1"
+                                color={
+                                  transaction.type === "expense"
+                                    ? "error.main"
+                                    : "success.main"
+                                }
+                                sx={{
+                                  fontWeight: "500",
+                                  fontSize: "0.9rem",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                ${transaction.amount.toFixed(2)}
+                              </Typography>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(transaction);
+                                }}
+                                sx={{
+                                  color: "text.secondary",
+                                  "&:hover": {
+                                    color: "error.main",
+                                  },
+                                  padding: 0.5,
+                                }}
+                              >
+                                <DeleteIcon sx={{ fontSize: "1rem" }} />
+                              </IconButton>
+                            </Stack>
+                          </Stack>
+
+                          <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{ flexWrap: "wrap", gap: 0.5 }}
+                          >
+                            <Chip
+                              label={transaction.category}
+                              size="small"
+                              sx={{
+                                fontSize: "0.7rem",
+                                height: "20px",
+                                "& .MuiChip-label": {
+                                  px: 1,
+                                  py: 0,
+                                },
+                              }}
+                            />
+                            <Chip
+                              label={
+                                transaction.type === "expense"
+                                  ? "Expense"
+                                  : "Income"
+                              }
+                              color={
+                                transaction.type === "expense"
+                                  ? "error"
+                                  : "success"
+                              }
+                              size="small"
+                              sx={{
+                                fontSize: "0.7rem",
+                                height: "20px",
+                                "& .MuiChip-label": {
+                                  px: 1,
+                                  py: 0,
+                                },
+                              }}
+                            />
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ fontSize: "0.7rem" }}
+                            >
+                              {formatDate(transaction.date)}
+                            </Typography>
+                          </Stack>
+                        </Stack>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </Stack>
+          ) : (
+            // Desktop view - Table layout
+            <TableContainer sx={{ mt: 3 }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Description</TableCell>
+                    <TableCell>Category</TableCell>
+                    <TableCell>Type</TableCell>
+                    <TableCell align="right">Amount</TableCell>
+                    <TableCell align="center">Actions</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {filteredTransactions.map((transaction, index) => (
+                    <TableRow key={index}>
+                      <TableCell>{formatDate(transaction.date)}</TableCell>
+                      <TableCell>{transaction.description}</TableCell>
+                      <TableCell>{transaction.category}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={
+                            transaction.type === "expense"
+                              ? "Expense"
+                              : "Income"
+                          }
+                          color={
+                            transaction.type === "expense" ? "error" : "success"
+                          }
+                          size="small"
+                          sx={{ width: 80 }}
+                        />
+                      </TableCell>
+                      <TableCell
+                        align="right"
+                        sx={{
+                          color:
+                            transaction.type === "expense"
+                              ? "error.main"
+                              : "success.main",
+                          fontWeight: "medium",
+                        }}
+                      >
+                        ${transaction.amount.toFixed(2)}
+                      </TableCell>
+                      <TableCell align="center">
+                        <IconButton
+                          onClick={() => handleDeleteClick(transaction)}
+                          sx={{
+                            color: "text.secondary",
+                            "&:hover": {
+                              color: "error.main",
+                            },
+                            transition: "color 0.2s",
+                          }}
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {filteredTransactions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center">
+                        No transactions found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Stack>
 
         {/* Delete Confirmation Dialog */}
         <Dialog
           open={deleteDialogOpen}
           onClose={handleDeleteCancel}
           disableEscapeKeyDown={loading}
-          disableBackdropClick={loading}
+          PaperProps={{
+            sx: {
+              width: "100%",
+              maxWidth: { xs: "calc(100% - 32px)", sm: 400 },
+              m: { xs: 2, sm: "auto" },
+            },
+          }}
         >
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogContent>

@@ -31,6 +31,7 @@ export function ExpenseProvider({ children }) {
 
   useEffect(() => {
     if (currentUser) {
+      console.log("Loading user data for:", currentUser.uid);
       loadUserData();
     } else {
       // Clear all data when user logs out
@@ -44,6 +45,7 @@ export function ExpenseProvider({ children }) {
     if (!currentUser) return;
 
     try {
+      console.log("Fetching expenses from Firestore...");
       const expensesQuery = query(
         collection(db, "expenses"),
         where("userId", "==", currentUser.uid)
@@ -53,6 +55,7 @@ export function ExpenseProvider({ children }) {
         id: doc.id,
         ...doc.data(),
       }));
+      console.log("Fetched expenses:", expenseData);
       setExpenses(expenseData);
 
       const incomesQuery = query(
@@ -137,9 +140,6 @@ export function ExpenseProvider({ children }) {
   };
 
   const addExpense = async (expenseData) => {
-    console.log("Current user:", currentUser);
-    console.log("Current user UID:", currentUser?.uid);
-
     if (!currentUser) {
       console.error("No authenticated user found");
       throw new Error("User not authenticated");
@@ -156,35 +156,26 @@ export function ExpenseProvider({ children }) {
       console.log("Formatted expense:", newExpense);
 
       // Add to Firebase first
-      const docRef = await addDoc(collection(db, "expenses"), newExpense).catch(
-        (error) => {
-          console.error("Firebase error details:", {
-            code: error.code,
-            message: error.message,
-            details: error,
-          });
-          throw error;
-        }
-      );
-
-      console.log("Document reference:", docRef);
+      const docRef = await addDoc(collection(db, "expenses"), newExpense);
+      console.log("Added to Firebase with ID:", docRef.id);
 
       // Then update local state with the new ID
       const expenseWithId = {
         ...newExpense,
         id: docRef.id,
+        amount: parseFloat(newExpense.amount),
         createdAt: new Date().toISOString(),
       };
 
-      setExpenses((prevExpenses) => [...prevExpenses, expenseWithId]);
+      setExpenses((prevExpenses) => {
+        const updatedExpenses = [...prevExpenses, expenseWithId];
+        console.log("Updated expenses state:", updatedExpenses);
+        return updatedExpenses;
+      });
+
       return expenseWithId;
     } catch (error) {
-      console.error("Detailed error in addExpense:", {
-        error,
-        errorMessage: error.message,
-        errorCode: error.code,
-        errorStack: error.stack,
-      });
+      console.error("Error in addExpense:", error);
       throw error;
     }
   };

@@ -21,6 +21,10 @@ import {
   MenuItem,
   Tooltip,
   Divider,
+  AppBar,
+  Toolbar,
+  useTheme,
+  useMediaQuery,
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
@@ -42,6 +46,8 @@ import {
   Tooltip as RechartsTooltip,
   Cell,
 } from "recharts";
+import { styled } from "@mui/material/styles";
+import CloseIcon from "@mui/icons-material/Close";
 
 const CATEGORY_COLORS = [
   "#2196f3", // Blue
@@ -55,6 +61,19 @@ const CATEGORY_COLORS = [
   "#0088FE", // Light Blue
   "#00C79F", // Light Teal
 ];
+
+// Update the chart container and expense list layout
+const StyledBox = styled(Box)(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    overflowX: "hidden",
+    width: "100vw",
+    position: "relative",
+    left: "50%",
+    right: "50%",
+    marginLeft: "-50vw",
+    marginRight: "-50vw",
+  },
+}));
 
 export default function SharedWalletExpenses({ wallet, onUpdate }) {
   const { currentUser, getUserDisplayName } = useAuth();
@@ -91,6 +110,9 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
       "Transportation",
     ]
   );
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // Update allCategories when wallet changes
   useEffect(() => {
@@ -343,7 +365,7 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
   };
 
   return (
-    <Box>
+    <StyledBox sx={{ width: "100%", overflowX: "hidden" }}>
       <AnimatePresence mode="wait">
         {error && (
           <motion.div
@@ -371,326 +393,544 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
         )}
       </AnimatePresence>
 
-      <Stack spacing={3}>
-        {/* Header Section */}
-        <Paper
-          elevation={3}
-          sx={{
-            p: 3,
-            borderRadius: 2,
-            bgcolor: "background.paper",
-          }}
-        >
-          <Stack spacing={3}>
-            {/* Action Buttons and Monthly Total */}
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              alignItems="center"
-            >
-              <Paper
-                elevation={3}
+      <Stack spacing={2}>
+        {/* Header Section - Mobile */}
+        {isMobile ? (
+          <Paper
+            elevation={3}
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              bgcolor: "background.paper",
+              width: "100%",
+            }}
+          >
+            <Stack spacing={2}>
+              {/* Monthly Total */}
+              <Box
                 sx={{
                   p: 2,
                   bgcolor: "primary.main",
                   color: "primary.contrastText",
                   borderRadius: 2,
-                  minWidth: 200,
                   textAlign: "center",
                 }}
               >
-                <Typography variant="subtitle2" sx={{ mb: 0.5, opacity: 0.9 }}>
-                  Monthly Total
+                <Typography variant="subtitle2" sx={{ opacity: 0.9 }}>
+                  {format(selectedDate, "MMMM yyyy")}
                 </Typography>
-                <Typography variant="h5" sx={{ fontWeight: "bold" }}>
+                <Typography variant="h5" sx={{ fontWeight: "bold", mt: 0.5 }}>
                   ${monthlyTotal.toFixed(2)}
                 </Typography>
-              </Paper>
+              </Box>
 
-              <Stack direction="row" spacing={2}>
-                <Tooltip title="Add Expense" arrow placement="top">
-                  <IconButton
-                    color="primary"
-                    onClick={() => setOpenExpenseDialog(true)}
-                    sx={{
-                      bgcolor: "primary.main",
-                      color: "white",
-                      "&:hover": {
-                        bgcolor: "primary.dark",
-                      },
-                      width: 48,
-                      height: 48,
-                    }}
-                  >
-                    <AddIcon />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Manage Categories" arrow placement="top">
-                  <IconButton
-                    color="primary"
-                    onClick={() => setOpenCategoryDialog(true)}
-                    sx={{
-                      bgcolor: "white",
-                      border: 1,
-                      borderColor: "primary.main",
-                      color: "primary.main",
-                      "&:hover": {
-                        bgcolor: "primary.50",
-                      },
-                      width: 48,
-                      height: 48,
-                    }}
-                  >
-                    <CategoryIcon />
-                  </IconButton>
-                </Tooltip>
+              {/* Action Buttons */}
+              <Stack direction="row" spacing={2} sx={{ width: "100%" }}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={() => setOpenExpenseDialog(true)}
+                >
+                  Add Expense
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<CategoryIcon />}
+                  onClick={() => setOpenCategoryDialog(true)}
+                >
+                  Categories
+                </Button>
               </Stack>
+
+              {/* Month Selector */}
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  views={["month", "year"]}
+                  label="Select Month"
+                  minDate={new Date(2024, 0)}
+                  maxDate={new Date(2034, 11)}
+                  value={selectedDate}
+                  onChange={(newDate) => setSelectedDate(newDate)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                    },
+                  }}
+                />
+              </LocalizationProvider>
             </Stack>
-
-            {/* Month Selector */}
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                views={["month", "year"]}
-                label="Select Month"
-                minDate={new Date(2024, 0)}
-                maxDate={new Date(2034, 11)}
-                value={selectedDate}
-                onChange={(newDate) => setSelectedDate(newDate)}
-                slotProps={{
-                  textField: {
-                    fullWidth: true,
-                    size: "small",
-                  },
-                }}
-              />
-            </LocalizationProvider>
-
-            {/* Add Category Breakdown Chart */}
-            {filteredExpenses.length > 0 && (
-              <Paper elevation={2} sx={{ p: 3, mt: 3 }}>
-                <Typography variant="h6" sx={{ mb: 3 }}>
-                  Spending by Category
-                </Typography>
-                <Box
+          </Paper>
+        ) : (
+          /* Desktop Header - existing code */
+          <Paper
+            elevation={3}
+            sx={{
+              p: 3,
+              borderRadius: 2,
+              bgcolor: "background.paper",
+            }}
+          >
+            <Stack spacing={3}>
+              {/* Action Buttons and Monthly Total */}
+              <Stack
+                direction="row"
+                justifyContent="space-between"
+                alignItems="center"
+              >
+                <Paper
+                  elevation={3}
                   sx={{
-                    height: Math.max(getCategoryData().length * 60, 300),
-                    width: "100%",
+                    p: 2,
+                    bgcolor: "primary.main",
+                    color: "primary.contrastText",
+                    borderRadius: 2,
+                    minWidth: 200,
+                    textAlign: "center",
                   }}
                 >
-                  <ResponsiveContainer>
-                    <BarChart
-                      data={getCategoryData()}
-                      layout="vertical"
-                      margin={{ top: 5, right: 50, left: 100, bottom: 5 }}
-                    >
-                      <XAxis
-                        type="number"
-                        tickFormatter={(value) => `$${value.toFixed(0)}`}
-                        fontSize={12}
-                      />
-                      <YAxis
-                        type="category"
-                        dataKey="name"
-                        width={90}
-                        fontSize={12}
-                        tick={{ fill: "#666" }}
-                      />
-                      <RechartsTooltip
-                        content={({ active, payload }) => {
-                          if (active && payload && payload.length) {
-                            const data = payload[0].payload;
-                            return (
-                              <Paper
-                                elevation={3}
-                                sx={(theme) => ({
-                                  p: 1.5,
-                                  bgcolor:
-                                    theme.palette.mode === "dark"
-                                      ? "rgba(33, 33, 33, 0.95)"
-                                      : "rgba(255, 255, 255, 0.98)",
-                                  border: "1px solid",
-                                  borderColor: getCategoryColor(data.name),
-                                  minWidth: 180,
-                                  color: theme.palette.text.primary,
-                                })}
-                              >
-                                <Stack spacing={0.5}>
-                                  <Typography
-                                    variant="subtitle2"
-                                    sx={{
-                                      color: getCategoryColor(data.name),
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    {data.name}
-                                  </Typography>
-                                  <Stack
-                                    direction="row"
-                                    justifyContent="space-between"
-                                    alignItems="center"
-                                  >
-                                    <Typography
-                                      variant="body2"
-                                      sx={(theme) => ({
-                                        color: theme.palette.text.primary,
-                                      })}
-                                    >
-                                      Amount:
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      sx={(theme) => ({
-                                        fontWeight: 500,
-                                        color: theme.palette.text.primary,
-                                      })}
-                                    >
-                                      ${data.value.toFixed(2)}
-                                    </Typography>
-                                  </Stack>
-                                  <Stack
-                                    direction="row"
-                                    justifyContent="space-between"
-                                    alignItems="center"
-                                  >
-                                    <Typography
-                                      variant="body2"
-                                      sx={(theme) => ({
-                                        color: theme.palette.text.primary,
-                                      })}
-                                    >
-                                      Percentage:
-                                    </Typography>
-                                    <Typography
-                                      variant="body2"
-                                      sx={(theme) => ({
-                                        fontWeight: 500,
-                                        color: theme.palette.text.primary,
-                                      })}
-                                    >
-                                      {data.percentage}%
-                                    </Typography>
-                                  </Stack>
-                                </Stack>
-                              </Paper>
-                            );
-                          }
-                          return null;
-                        }}
-                        cursor={false}
-                      />
-                      <Bar
-                        dataKey="value"
-                        radius={[0, 4, 4, 0]}
-                        animationDuration={1000}
-                        label={({ x, y, width, height, value }) => {
-                          const data = getCategoryData().find(
-                            (item) => item.value === value
-                          );
-                          return data ? (
-                            <text
-                              x={x + width + 5}
-                              y={y + height / 2}
-                              fill="#666"
-                              fontSize={12}
-                              textAnchor="start"
-                              dominantBaseline="middle"
-                            >
-                              {data.percentage}%
-                            </text>
-                          ) : null;
-                        }}
-                      >
-                        {getCategoryData().map((entry) => (
-                          <Cell
-                            key={`cell-${entry.name}`}
-                            fill={getCategoryColor(entry.name)}
-                          />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-                <Box sx={{ mt: 2 }}>
                   <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    align="center"
+                    variant="subtitle2"
+                    sx={{ mb: 0.5, opacity: 0.9 }}
                   >
-                    Total spending this month: ${monthlyTotal.toFixed(2)}
+                    Monthly Total
                   </Typography>
-                </Box>
-              </Paper>
-            )}
-          </Stack>
-        </Paper>
+                  <Typography variant="h5" sx={{ fontWeight: "bold" }}>
+                    ${monthlyTotal.toFixed(2)}
+                  </Typography>
+                </Paper>
 
-        {/* Expenses List */}
-        <List sx={{ mt: 2 }}>
-          {filteredExpenses.length === 0 ? (
-            <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
-              No expenses found for {format(selectedDate, "MMMM yyyy")}
-            </Typography>
-          ) : (
-            filteredExpenses.map((expense) => (
-              <motion.div
-                key={expense.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <ListItem
-                  component={Paper}
-                  variant="outlined"
-                  sx={{ mb: 2, p: 2 }}
-                >
-                  <ListItemText
-                    primary={
-                      <Typography variant="subtitle1">
-                        {expense.description}
-                      </Typography>
-                    }
-                    secondary={
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Chip
-                          label={`$${expense.amount.toFixed(2)}`}
-                          color="primary"
-                          variant="outlined"
-                        />
-                        <Chip
-                          label={expense.category}
-                          size="small"
-                          sx={{
-                            bgcolor: `${getCategoryColor(expense.category)}20`,
-                            color: getCategoryColor(expense.category),
-                            borderColor: getCategoryColor(expense.category),
-                            "& .MuiChip-label": {
-                              fontWeight: 500,
-                            },
-                          }}
-                        />
-                        <Typography variant="caption" color="text.secondary">
-                          Paid by: {getDisplayName(expense.paidBy)}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {new Date(expense.date).toLocaleDateString()}
-                        </Typography>
-                      </Stack>
-                    }
-                  />
-                  <ListItemSecondaryAction>
+                <Stack direction="row" spacing={2}>
+                  <Tooltip title="Add Expense" arrow placement="top">
                     <IconButton
-                      edge="end"
-                      onClick={() =>
-                        setDeleteConfirmDialog({ open: true, expense })
-                      }
+                      color="primary"
+                      onClick={() => setOpenExpenseDialog(true)}
+                      sx={{
+                        bgcolor: "primary.main",
+                        color: "white",
+                        "&:hover": {
+                          bgcolor: "primary.dark",
+                        },
+                        width: 48,
+                        height: 48,
+                      }}
                     >
-                      <DeleteIcon />
+                      <AddIcon />
                     </IconButton>
-                  </ListItemSecondaryAction>
-                </ListItem>
-              </motion.div>
-            ))
-          )}
-        </List>
+                  </Tooltip>
+                  <Tooltip title="Manage Categories" arrow placement="top">
+                    <IconButton
+                      color="primary"
+                      onClick={() => setOpenCategoryDialog(true)}
+                      sx={{
+                        bgcolor: "white",
+                        border: 1,
+                        borderColor: "primary.main",
+                        color: "primary.main",
+                        "&:hover": {
+                          bgcolor: "primary.50",
+                        },
+                        width: 48,
+                        height: 48,
+                      }}
+                    >
+                      <CategoryIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              </Stack>
+
+              {/* Month Selector */}
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  views={["month", "year"]}
+                  label="Select Month"
+                  minDate={new Date(2024, 0)}
+                  maxDate={new Date(2034, 11)}
+                  value={selectedDate}
+                  onChange={(newDate) => setSelectedDate(newDate)}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      size: "small",
+                    },
+                  }}
+                />
+              </LocalizationProvider>
+
+              {/* Add Category Breakdown Chart */}
+              {filteredExpenses.length > 0 && (
+                <Paper elevation={2} sx={{ p: 3, mt: 3 }}>
+                  <Typography variant="h6" sx={{ mb: 3 }}>
+                    Spending by Category
+                  </Typography>
+                  <Box
+                    sx={{
+                      height: Math.max(getCategoryData().length * 60, 300),
+                      width: "100%",
+                    }}
+                  >
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={getCategoryData()}
+                        layout="vertical"
+                        margin={{ top: 5, right: 50, left: 100, bottom: 5 }}
+                      >
+                        <XAxis
+                          type="number"
+                          tickFormatter={(value) => `$${value.toFixed(0)}`}
+                          fontSize={12}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          width={90}
+                          fontSize={12}
+                          tick={{ fill: "#666" }}
+                        />
+                        <RechartsTooltip
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <Paper
+                                  elevation={3}
+                                  sx={(theme) => ({
+                                    p: 1.5,
+                                    bgcolor:
+                                      theme.palette.mode === "dark"
+                                        ? "rgba(33, 33, 33, 0.95)"
+                                        : "rgba(255, 255, 255, 0.98)",
+                                    border: "1px solid",
+                                    borderColor: getCategoryColor(data.name),
+                                    minWidth: 180,
+                                    color: theme.palette.text.primary,
+                                  })}
+                                >
+                                  <Stack spacing={0.5}>
+                                    <Typography
+                                      variant="subtitle2"
+                                      sx={{
+                                        color: getCategoryColor(data.name),
+                                        fontWeight: 600,
+                                      }}
+                                    >
+                                      {data.name}
+                                    </Typography>
+                                    <Stack
+                                      direction="row"
+                                      justifyContent="space-between"
+                                      alignItems="center"
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        sx={(theme) => ({
+                                          color: theme.palette.text.primary,
+                                        })}
+                                      >
+                                        Amount:
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        sx={(theme) => ({
+                                          fontWeight: 500,
+                                          color: theme.palette.text.primary,
+                                        })}
+                                      >
+                                        ${data.value.toFixed(2)}
+                                      </Typography>
+                                    </Stack>
+                                    <Stack
+                                      direction="row"
+                                      justifyContent="space-between"
+                                      alignItems="center"
+                                    >
+                                      <Typography
+                                        variant="body2"
+                                        sx={(theme) => ({
+                                          color: theme.palette.text.primary,
+                                        })}
+                                      >
+                                        Percentage:
+                                      </Typography>
+                                      <Typography
+                                        variant="body2"
+                                        sx={(theme) => ({
+                                          fontWeight: 500,
+                                          color: theme.palette.text.primary,
+                                        })}
+                                      >
+                                        {data.percentage}%
+                                      </Typography>
+                                    </Stack>
+                                  </Stack>
+                                </Paper>
+                              );
+                            }
+                            return null;
+                          }}
+                          cursor={false}
+                        />
+                        <Bar
+                          dataKey="value"
+                          radius={[0, 4, 4, 0]}
+                          animationDuration={1000}
+                          label={({ x, y, width, height, value }) => {
+                            const data = getCategoryData().find(
+                              (item) => item.value === value
+                            );
+                            return data ? (
+                              <text
+                                x={x + width + 5}
+                                y={y + height / 2}
+                                fill="#666"
+                                fontSize={12}
+                                textAnchor="start"
+                                dominantBaseline="middle"
+                              >
+                                {data.percentage}%
+                              </text>
+                            ) : null;
+                          }}
+                        >
+                          {getCategoryData().map((entry) => (
+                            <Cell
+                              key={`cell-${entry.name}`}
+                              fill={getCategoryColor(entry.name)}
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Box>
+                  <Box sx={{ mt: 2 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      align="center"
+                    >
+                      Total spending this month: ${monthlyTotal.toFixed(2)}
+                    </Typography>
+                  </Box>
+                </Paper>
+              )}
+            </Stack>
+          </Paper>
+        )}
+
+        {/* Category Chart - Mobile */}
+        {isMobile && filteredExpenses.length > 0 && (
+          <Paper elevation={2} sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Spending by Category
+            </Typography>
+            <Box
+              sx={{
+                width: "100%",
+                height: Math.max(getCategoryData().length * 50, 200),
+                mt: 2,
+              }}
+            >
+              <ResponsiveContainer>
+                <BarChart
+                  data={getCategoryData()}
+                  layout="vertical"
+                  margin={{ top: 5, right: 30, left: 80, bottom: 5 }}
+                >
+                  <XAxis
+                    type="number"
+                    tickFormatter={(value) => `$${value}`}
+                    fontSize={12}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={75}
+                    fontSize={11}
+                    tick={{ fill: "#666" }}
+                  />
+                  <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                    {getCategoryData().map((entry) => (
+                      <Cell
+                        key={entry.name}
+                        fill={getCategoryColor(entry.name)}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        )}
+
+        {/* Expenses List - Mobile */}
+        {isMobile ? (
+          <List sx={{ p: 0 }}>
+            {filteredExpenses.length === 0 ? (
+              <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+                No expenses found for {format(selectedDate, "MMMM yyyy")}
+              </Typography>
+            ) : (
+              filteredExpenses.map((expense) => (
+                <motion.div
+                  key={expense.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <Paper
+                    elevation={1}
+                    sx={{
+                      mb: 2,
+                      overflow: "hidden",
+                      borderRadius: 2,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        p: 2,
+                        borderLeft: 3,
+                        borderColor: getCategoryColor(expense.category),
+                      }}
+                    >
+                      <Stack spacing={1.5}>
+                        {/* Amount and Description */}
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="flex-start"
+                        >
+                          <Box sx={{ flex: 1 }}>
+                            <Typography variant="subtitle1">
+                              {expense.description}
+                            </Typography>
+                          </Box>
+                          <Typography
+                            variant="h6"
+                            color="primary"
+                            sx={{ fontWeight: 600, ml: 2 }}
+                          >
+                            ${expense.amount.toFixed(2)}
+                          </Typography>
+                        </Stack>
+
+                        {/* Category and Date */}
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Chip
+                            label={expense.category}
+                            size="small"
+                            sx={{
+                              bgcolor: `${getCategoryColor(
+                                expense.category
+                              )}20`,
+                              color: getCategoryColor(expense.category),
+                              borderColor: getCategoryColor(expense.category),
+                              "& .MuiChip-label": { fontWeight: 500 },
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(expense.date).toLocaleDateString()}
+                          </Typography>
+                        </Stack>
+
+                        {/* Paid By and Delete */}
+                        <Stack
+                          direction="row"
+                          justifyContent="space-between"
+                          alignItems="center"
+                        >
+                          <Typography variant="body2" color="text.secondary">
+                            Paid by: {getDisplayName(expense.paidBy)}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() =>
+                              setDeleteConfirmDialog({ open: true, expense })
+                            }
+                            sx={{ ml: "auto" }}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Stack>
+                      </Stack>
+                    </Box>
+                  </Paper>
+                </motion.div>
+              ))
+            )}
+          </List>
+        ) : (
+          /* Desktop Expenses List - existing code */
+          <List sx={{ mt: 2 }}>
+            {filteredExpenses.length === 0 ? (
+              <Typography color="text.secondary" align="center" sx={{ py: 4 }}>
+                No expenses found for {format(selectedDate, "MMMM yyyy")}
+              </Typography>
+            ) : (
+              filteredExpenses.map((expense) => (
+                <motion.div
+                  key={expense.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <ListItem
+                    component={Paper}
+                    variant="outlined"
+                    sx={{ mb: 2, p: 2 }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Typography variant="subtitle1">
+                          {expense.description}
+                        </Typography>
+                      }
+                      secondary={
+                        <Stack direction="row" spacing={1} alignItems="center">
+                          <Chip
+                            label={`$${expense.amount.toFixed(2)}`}
+                            color="primary"
+                            variant="outlined"
+                          />
+                          <Chip
+                            label={expense.category}
+                            size="small"
+                            sx={{
+                              bgcolor: `${getCategoryColor(
+                                expense.category
+                              )}20`,
+                              color: getCategoryColor(expense.category),
+                              borderColor: getCategoryColor(expense.category),
+                              "& .MuiChip-label": {
+                                fontWeight: 500,
+                              },
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary">
+                            Paid by: {getDisplayName(expense.paidBy)}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {new Date(expense.date).toLocaleDateString()}
+                          </Typography>
+                        </Stack>
+                      }
+                    />
+                    <ListItemSecondaryAction>
+                      <IconButton
+                        edge="end"
+                        onClick={() =>
+                          setDeleteConfirmDialog({ open: true, expense })
+                        }
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </ListItemSecondaryAction>
+                  </ListItem>
+                </motion.div>
+              ))
+            )}
+          </List>
+        )}
       </Stack>
 
       {/* Categories Dialog */}
@@ -815,72 +1055,93 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
       <Dialog
         open={openExpenseDialog}
         onClose={() => setOpenExpenseDialog(false)}
+        fullScreen={isMobile}
+        PaperProps={{
+          sx: {
+            width: "100%",
+            maxWidth: { xs: "100%", sm: 600 },
+            m: { xs: 0, sm: 2 },
+            height: isMobile ? "100%" : "auto",
+          },
+        }}
       >
-        <form onSubmit={handleAddExpense}>
-          <DialogTitle>Add New Expense</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField
-                label="Description"
-                value={newExpense.description}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, description: e.target.value })
-                }
-                fullWidth
-                required
-              />
-              <TextField
-                label="Amount"
-                type="number"
-                value={newExpense.amount}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, amount: e.target.value })
-                }
-                fullWidth
-                required
-                InputProps={{
-                  startAdornment: "$",
-                }}
-              />
-              <TextField
-                select
-                label="Category"
-                value={newExpense.category}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, category: e.target.value })
-                }
-                fullWidth
+        {isMobile && (
+          <AppBar position="sticky" sx={{ bgcolor: "background.paper" }}>
+            <Toolbar>
+              <IconButton
+                edge="start"
+                color="inherit"
+                onClick={() => setOpenExpenseDialog(false)}
+                aria-label="close"
               >
-                {allCategories.map((category) => (
-                  <MenuItem key={category} value={category}>
-                    {category}
-                  </MenuItem>
-                ))}
-              </TextField>
-              <TextField
-                select
-                label="Paid By"
-                value={newExpense.paidBy}
-                onChange={(e) =>
-                  setNewExpense({ ...newExpense, paidBy: e.target.value })
-                }
-                fullWidth
-              >
-                {wallet.members.map((member) => (
-                  <MenuItem key={member} value={member}>
-                    {memberDisplayNames[member] || member}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenExpenseDialog(false)}>Cancel</Button>
-            <Button type="submit" variant="contained">
-              Add Expense
-            </Button>
-          </DialogActions>
-        </form>
+                <CloseIcon />
+              </IconButton>
+              <Typography sx={{ ml: 2, flex: 1 }} variant="h6">
+                Add New Expense
+              </Typography>
+              <Button autoFocus color="inherit" onClick={handleAddExpense}>
+                Save
+              </Button>
+            </Toolbar>
+          </AppBar>
+        )}
+
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <TextField
+              label="Description"
+              value={newExpense.description}
+              onChange={(e) =>
+                setNewExpense({ ...newExpense, description: e.target.value })
+              }
+              fullWidth
+              required
+            />
+            <TextField
+              label="Amount"
+              type="number"
+              value={newExpense.amount}
+              onChange={(e) =>
+                setNewExpense({ ...newExpense, amount: e.target.value })
+              }
+              fullWidth
+              required
+              InputProps={{
+                startAdornment: "$",
+              }}
+            />
+            <TextField
+              select
+              label="Category"
+              value={newExpense.category}
+              onChange={(e) =>
+                setNewExpense({ ...newExpense, category: e.target.value })
+              }
+              fullWidth
+            >
+              {allCategories.map((category) => (
+                <MenuItem key={category} value={category}>
+                  {category}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Paid By"
+              value={newExpense.paidBy}
+              onChange={(e) =>
+                setNewExpense({ ...newExpense, paidBy: e.target.value })
+              }
+              fullWidth
+            >
+              {wallet.members.map((member) => (
+                <MenuItem key={member} value={member}>
+                  {memberDisplayNames[member] || member}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+        </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
@@ -952,6 +1213,6 @@ export default function SharedWalletExpenses({ wallet, onUpdate }) {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </StyledBox>
   );
 }

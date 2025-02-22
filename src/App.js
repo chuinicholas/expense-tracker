@@ -1,4 +1,10 @@
-import { Container, Box, CssBaseline } from "@mui/material";
+import {
+  Container,
+  Box,
+  CssBaseline,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ExpenseProvider } from "./context/ExpenseContext";
 import { CustomThemeProvider } from "./context/ThemeContext";
@@ -16,8 +22,17 @@ import QuickStartGuide from "./components/QuickStartGuide";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LandingPage from "./components/LandingPage";
 import SharedWallet from "./components/SharedWallet";
+import { useState } from "react";
 
 function AppContent() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
   return (
     <Routes>
       {/* Public routes */}
@@ -38,17 +53,27 @@ function AppContent() {
                 backgroundColor: "background.default",
               }}
             >
-              <Sidebar />
+              <Sidebar
+                mobileOpen={mobileOpen}
+                onDrawerToggle={handleDrawerToggle}
+              />
               <ThemeToggle />
               <Box
+                component="main"
                 sx={{
                   flexGrow: 1,
-                  pl: "80px",
-                  py: 4,
-                  px: 3,
+                  width: { sm: `calc(100% - ${isMobile ? 0 : 80}px)` },
+                  ml: { sm: `${isMobile ? 0 : 80}px` },
+                  mt: { xs: "56px", sm: 0 }, // Add top margin for mobile app bar
+                  p: { xs: 2, sm: 3 },
                 }}
               >
-                <Container maxWidth="lg">
+                <Container
+                  maxWidth="lg"
+                  sx={{
+                    px: { xs: 1, sm: 2, md: 3 },
+                  }}
+                >
                   <Routes>
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/expenses" element={<ExpenseList />} />

@@ -22,12 +22,16 @@ import {
   Alert,
   Chip,
   Divider,
+  useMediaQuery,
+  AppBar,
+  Toolbar,
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import AddIcon from "@mui/icons-material/Add";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import DeleteIcon from "@mui/icons-material/Delete";
+import CloseIcon from "@mui/icons-material/Close";
 import { db } from "../config/firebase";
 import {
   collection,
@@ -249,7 +253,13 @@ export default function SharedWallet() {
   }, [error]);
 
   return (
-    <Box sx={{ maxWidth: 800, mx: "auto", p: 3 }}>
+    <Box
+      sx={{
+        width: "100%",
+        overflowX: "hidden",
+        px: { xs: 0, sm: 2 },
+      }}
+    >
       <AnimatePresence mode="wait">
         {error && (
           <motion.div
@@ -258,7 +268,7 @@ export default function SharedWallet() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Alert severity="error" sx={{ mb: 3 }}>
+            <Alert severity="error" sx={{ mx: { xs: 2, sm: 0 }, mb: 2 }}>
               {error}
             </Alert>
           </motion.div>
@@ -270,25 +280,40 @@ export default function SharedWallet() {
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Alert severity="success" sx={{ mb: 3 }}>
+            <Alert severity="success" sx={{ mx: { xs: 2, sm: 0 }, mb: 2 }}>
               {success}
             </Alert>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <Paper elevation={3} sx={{ p: 3, mb: 3 }}>
+      <Paper
+        elevation={3}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          mb: 3,
+          mx: { xs: 2, sm: 0 },
+          borderRadius: { xs: 2, sm: 3 },
+        }}
+      >
         <Stack
-          direction="row"
+          direction={{ xs: "column", sm: "row" }}
           justifyContent="space-between"
-          alignItems="center"
+          alignItems={{ xs: "stretch", sm: "center" }}
+          spacing={2}
           mb={3}
         >
-          <Typography variant="h5">Shared Wallets</Typography>
+          <Typography
+            variant="h5"
+            sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+          >
+            Shared Wallets
+          </Typography>
           <Button
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setOpenNewWalletDialog(true)}
+            sx={{ width: { xs: "100%", sm: "auto" } }}
           >
             Create New Wallet
           </Button>
@@ -299,7 +324,7 @@ export default function SharedWallet() {
             You don't have any shared wallets yet. Create one to get started!
           </Typography>
         ) : (
-          <List>
+          <List sx={{ p: 0 }}>
             {wallets.map((wallet) => (
               <motion.div
                 key={wallet.id}
@@ -309,67 +334,103 @@ export default function SharedWallet() {
                 <ListItem
                   component={Paper}
                   variant="outlined"
-                  sx={{ mb: 2, p: 2, cursor: "pointer" }}
+                  sx={{
+                    mb: 2,
+                    p: { xs: 2, sm: 2.5 },
+                    cursor: "pointer",
+                    flexDirection: "column",
+                    borderRadius: { xs: 2, sm: 2 },
+                  }}
                   onClick={() => handleWalletSelect(wallet)}
                 >
-                  <ListItemText
-                    primary={
-                      <Typography variant="h6" component="div">
-                        {wallet.name}
-                      </Typography>
-                    }
-                    secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {wallet.description}
-                        </Typography>
-                        <Stack
-                          direction="row"
-                          spacing={2}
-                          alignItems="center"
-                          mt={1}
-                        >
-                          <AvatarGroup max={4}>
-                            {wallet.members.map((member) => (
-                              <Tooltip
-                                key={member}
-                                title={memberDisplayNames[member] || member}
-                              >
-                                <Avatar sx={{ width: 24, height: 24 }}>
-                                  {getDisplayNameInitial(member)}
-                                </Avatar>
-                              </Tooltip>
-                            ))}
-                          </AvatarGroup>
-                        </Stack>
-                      </Box>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <Stack direction="row" spacing={1}>
-                      <IconButton
-                        edge="end"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedWallet(wallet);
-                          setOpenInviteDialog(true);
-                        }}
+                  <Box sx={{ width: "100%" }}>
+                    <Stack spacing={1.5}>
+                      <Stack
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="flex-start"
                       >
-                        <PersonAddIcon />
-                      </IconButton>
-                      {wallet.createdBy === currentUser.email && (
-                        <IconButton
-                          edge="end"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteWalletDialog({ open: true, wallet });
+                        <Typography
+                          variant="h6"
+                          component="div"
+                          sx={{ fontSize: { xs: "1rem", sm: "1.25rem" } }}
+                        >
+                          {wallet.name}
+                        </Typography>
+                        <Stack direction="row" spacing={1}>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedWallet(wallet);
+                              setOpenInviteDialog(true);
+                            }}
+                          >
+                            <PersonAddIcon fontSize="small" />
+                          </IconButton>
+                          {wallet.createdBy === currentUser.email && (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteWalletDialog({ open: true, wallet });
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          )}
+                        </Stack>
+                      </Stack>
+
+                      {wallet.description && (
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            fontSize: { xs: "0.875rem", sm: "1rem" },
+                            mt: 0.5,
                           }}
                         >
-                          <DeleteIcon />
-                        </IconButton>
+                          {wallet.description}
+                        </Typography>
                       )}
+
+                      <Stack
+                        direction="row"
+                        spacing={2}
+                        alignItems="center"
+                        sx={{ mt: 1 }}
+                      >
+                        <AvatarGroup
+                          max={4}
+                          sx={{
+                            "& .MuiAvatar-root": {
+                              width: { xs: 28, sm: 32 },
+                              height: { xs: 28, sm: 32 },
+                              fontSize: { xs: "0.875rem", sm: "1rem" },
+                            },
+                          }}
+                        >
+                          {wallet.members.map((member) => (
+                            <Tooltip
+                              key={member}
+                              title={memberDisplayNames[member] || member}
+                            >
+                              <Avatar>{getDisplayNameInitial(member)}</Avatar>
+                            </Tooltip>
+                          ))}
+                        </AvatarGroup>
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: "0.75rem", sm: "0.875rem" } }}
+                        >
+                          {wallet.members.length} member
+                          {wallet.members.length !== 1 ? "s" : ""}
+                        </Typography>
+                      </Stack>
                     </Stack>
-                  </ListItemSecondaryAction>
+                  </Box>
                 </ListItem>
               </motion.div>
             ))}
@@ -379,19 +440,31 @@ export default function SharedWallet() {
 
       {/* Show expenses when a wallet is selected */}
       {selectedWalletForExpenses && (
-        <Paper elevation={3} sx={{ p: 3 }}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: { xs: 2, sm: 3 },
+            mx: { xs: 2, sm: 0 },
+            borderRadius: { xs: 2, sm: 3 },
+          }}
+        >
           <Stack
-            direction="row"
+            direction={{ xs: "column", sm: "row" }}
             justifyContent="space-between"
-            alignItems="center"
+            alignItems={{ xs: "stretch", sm: "center" }}
+            spacing={2}
             mb={2}
           >
-            <Typography variant="h5">
-              {selectedWalletForExpenses.name} - Expenses
+            <Typography
+              variant="h5"
+              sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+            >
+              {selectedWalletForExpenses.name}
             </Typography>
             <Button
               variant="outlined"
               onClick={() => setSelectedWalletForExpenses(null)}
+              sx={{ width: { xs: "100%", sm: "auto" } }}
             >
               Back to Wallets
             </Button>
@@ -399,7 +472,6 @@ export default function SharedWallet() {
           <SharedWalletExpenses
             wallet={selectedWalletForExpenses}
             onUpdate={() => {
-              // Refresh the wallets list when an expense is added/deleted
               const updatedWallet = wallets.find(
                 (w) => w.id === selectedWalletForExpenses.id
               );
@@ -415,45 +487,76 @@ export default function SharedWallet() {
       <Dialog
         open={openNewWalletDialog}
         onClose={() => setOpenNewWalletDialog(false)}
+        fullScreen={useMediaQuery((theme) => theme.breakpoints.down("sm"))}
+        PaperProps={{
+          sx: {
+            width: "100%",
+            maxWidth: { xs: "100%", sm: 600 },
+            m: { xs: 0, sm: 2 },
+            height: useMediaQuery((theme) => theme.breakpoints.down("sm"))
+              ? "100%"
+              : "auto",
+          },
+        }}
       >
-        <form onSubmit={handleCreateWallet}>
-          <DialogTitle>Create New Shared Wallet</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField
-                label="Wallet Name"
-                value={newWalletData.name}
-                onChange={(e) =>
-                  setNewWalletData({ ...newWalletData, name: e.target.value })
-                }
-                fullWidth
-                required
-              />
-              <TextField
-                label="Description"
-                value={newWalletData.description}
-                onChange={(e) =>
-                  setNewWalletData({
-                    ...newWalletData,
-                    description: e.target.value,
-                  })
-                }
-                fullWidth
-                multiline
-                rows={2}
-                placeholder="Optional: Add a description for this shared wallet"
-              />
-            </Stack>
-          </DialogContent>
+        {useMediaQuery((theme) => theme.breakpoints.down("sm")) && (
+          <AppBar position="sticky" sx={{ bgcolor: "background.paper" }}>
+            <Toolbar>
+              <IconButton
+                edge="start"
+                color="inherit"
+                onClick={() => setOpenNewWalletDialog(false)}
+              >
+                <CloseIcon />
+              </IconButton>
+              <Typography sx={{ ml: 2, flex: 1 }} variant="h6">
+                Create New Wallet
+              </Typography>
+              <Button color="inherit" onClick={handleCreateWallet}>
+                Create
+              </Button>
+            </Toolbar>
+          </AppBar>
+        )}
+
+        <DialogContent>
+          <Stack spacing={3} sx={{ mt: 2 }}>
+            <TextField
+              label="Wallet Name"
+              value={newWalletData.name}
+              onChange={(e) =>
+                setNewWalletData({ ...newWalletData, name: e.target.value })
+              }
+              fullWidth
+              required
+            />
+            <TextField
+              label="Description"
+              value={newWalletData.description}
+              onChange={(e) =>
+                setNewWalletData({
+                  ...newWalletData,
+                  description: e.target.value,
+                })
+              }
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="Optional: Add a description for this shared wallet"
+            />
+          </Stack>
+        </DialogContent>
+
+        {!useMediaQuery((theme) => theme.breakpoints.down("sm")) && (
           <DialogActions>
             <Button onClick={() => setOpenNewWalletDialog(false)}>
               Cancel
             </Button>
-            <Button type="submit" variant="contained">
+            <Button onClick={handleCreateWallet} variant="contained">
               Create
             </Button>
           </DialogActions>
-        </form>
+        )}
       </Dialog>
 
       {/* Invite Member Dialog */}
